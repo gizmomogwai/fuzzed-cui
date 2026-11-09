@@ -1,0 +1,30 @@
+name "cui-selector"
+description "Selector UI simulator: a fuzzy picker drawn with the CUI C library"
+authors "Christian Koestlin"
+copyright "Copyright (c) 2026, Christian Koestlin"
+license "MIT"
+toolchainRequirements ldc=">=1.42.0" dmd="no" gdc="no"
+
+configuration "application" {
+    targetType "executable"
+    targetPath "out/main/cui-selector"
+    targetName "cui-selector"
+    sourcePaths "source"
+    importPaths "source"
+    mainSourceFile "source/app.d"
+    dflags "-P-I$CUI_PREFIX/include" platform="ldc"
+    lflags "-L$CUI_PREFIX/lib" "-lcui"
+    lflags "-lX11" "-ldl" "-lm" "-lpthread" platform="linux"
+    lflags "-framework" "Cocoa" "-framework" "QuartzCore" "-framework" "OpenGL" platform="osx"
+}
+
+configuration "unittest" {
+    targetType "executable"
+    targetPath "out/tests/cui-selector"
+    targetName "cui-selector-tests"
+    sourcePaths "source/selector" "tests"
+    excludedSourceFiles "source/selector/window.d"
+    importPaths "source" "tests"
+    mainSourceFile "tests/runner.d"
+    dependency "unit-threaded" version="~>2.2.6"
+}
