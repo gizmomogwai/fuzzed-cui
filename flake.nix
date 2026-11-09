@@ -7,9 +7,15 @@
       url = "github:gizmomogwai/CUI/borderless-window";
       flake = false;
     };
+
+    # Provides fuzzed.model and fuzzed.algorithm; only those two modules are compiled.
+    fuzzed = {
+      url = "github:gizmomogwai/fuzzed";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, cui }:
+  outputs = { self, nixpkgs, cui, fuzzed }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
       forAllSystems = function:
@@ -35,7 +41,42 @@
           # The generated cui.pc joins absolute paths wrongly; dub links via CUI_PREFIX instead.
           postInstall = "rm -r $out/lib/pkgconfig";
         };
-        default = cui;
+        # The selector executable; compiled with ldc2 directly so no dub package fetching is needed.
+        cui-selector = pkgs.stdenv.mkDerivation {
+          pname = "cui-selector";
+          version = "git";
+          src = self;
+          nativeBuildInputs = [ pkgs.ldc ];
+          buildInputs = runtimePackages pkgs;
+          dontConfigure = true;
+          buildPhase = ''
+            runHook preBuild
+            ldc2 -O -of=cui-selector \
+              -P-I${cui}/include -L-L${cui}/lib -L-lcui \
+              -Isource -I${fuzzed}/source \
+              source/app.d source/cui_c.c source/cui_util.d \
+              source/selector/model.d source/selector/window.d \
+              ${fuzzed}/source/fuzzed/model.d ${fuzzed}/source/fuzzed/algorithm.d \
+              ${if pkgs.stdenv.hostPlatform.isDarwin
+                then "-L-framework -LCocoa -L-framework -LQuartzCore -L-framework -LOpenGL"
+                else "-L-lX11 -L-ldl -L-lm -L-lpthread"}
+            runHook postBuild
+          '';
+          installPhase = ''
+            runHook preInstall
+            install -D cui-selector $out/bin/cui-selector
+            runHook postInstall
+          '';
+          meta.mainProgram = "cui-selector";
+        };
+        default = cui-selector;
+      });
+
+      apps = forAllSystems (pkgs: {
+        default = {
+          type = "app";
+          program = "${self.packages.${pkgs.stdenv.hostPlatform.system}.cui-selector}/bin/cui-selector";
+        };
       });
 
       devShells = forAllSystems (pkgs: {
