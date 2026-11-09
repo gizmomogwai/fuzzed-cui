@@ -4,6 +4,7 @@ import core.stdc.string : strlen;
 import cui_c;
 import cui_util : CUI_FILL, CUI_PX, tokenColor, CuiToken;
 import selector.model : Navigation, Selector;
+import selector.theme : mix, Rgb, standardAccentIndex, ThemeName, zenburn, zenburnAccent;
 import std.algorithm : max, min;
 import std.format : format;
 import std.range : empty;
@@ -23,7 +24,8 @@ final class SelectorWindow
     private float scrollTop = 0;
     private bool highlightChanged = true;
 
-    this(Selector selector, string title, bool hidden = false)
+    this(Selector selector, string title, bool hidden = false,
+            ThemeName theme = ThemeName.standard, string accent = "violet")
     {
         this.selector = selector;
         cui_app_desc description;
@@ -33,12 +35,67 @@ final class SelectorWindow
         description.hidden = hidden;
         description.borderless = true;
         description.theme = CUI_THEME_DARK;
-        description.accent = CUI_ACCENT_VIOLET;
+        description.accent = cast(cui_accent) standardAccentIndex(theme == ThemeName.standard
+                ? accent : "neutral");
         app = cui_app_create(&description);
         if (app is null)
         {
             throw new Exception("Could not create the CUI window");
         }
+        if (theme == ThemeName.zenburn)
+        {
+            applyZenburn(cui_theme_get(cui_app_ui(app)), zenburnAccent(accent));
+        }
+    }
+
+    /// Overwrites the colors of CUI's dark theme; the selector never switches theme at runtime.
+    private static void applyZenburn(cui_theme* theme, Rgb accent)
+    {
+        static cui_color color(Rgb value, ubyte alpha = 255)
+        {
+            return cui_color(value.red, value.green, value.blue, alpha);
+        }
+
+        auto colors = theme.colors.ptr;
+        colors[CUI_TOKEN_BACKGROUND] = color(zenburn.background);
+        colors[CUI_TOKEN_SURFACE] = color(zenburn.surface);
+        colors[CUI_TOKEN_SURFACE_RAISED] = color(zenburn.surfaceRaised);
+        colors[CUI_TOKEN_SURFACE_MUTED] = color(zenburn.surfaceMuted);
+        colors[CUI_TOKEN_FOREGROUND] = color(zenburn.foreground);
+        colors[CUI_TOKEN_TEXT_SECONDARY] = color(zenburn.secondary);
+        colors[CUI_TOKEN_TEXT_MUTED] = color(zenburn.muted);
+        colors[CUI_TOKEN_BORDER] = color(mix(zenburn.surface, zenburn.foreground, 0.18));
+        colors[CUI_TOKEN_BORDER_SUBTLE] = color(mix(zenburn.surface, zenburn.foreground, 0.08));
+        colors[CUI_TOKEN_BORDER_STRONG] = color(mix(zenburn.surface, zenburn.foreground, 0.4));
+        colors[CUI_TOKEN_ACCENT] = color(accent);
+        colors[CUI_TOKEN_ACCENT_STRONG] = color(mix(accent, zenburn.foreground, 0.35));
+        colors[CUI_TOKEN_ACCENT_SUBTLE] = color(accent, 0x30);
+        colors[CUI_TOKEN_ACCENT_FOREGROUND] = color(zenburn.background);
+        colors[CUI_TOKEN_SUCCESS] = color(zenburn.success);
+        colors[CUI_TOKEN_WARNING] = color(zenburn.warning);
+        colors[CUI_TOKEN_DANGER] = color(zenburn.danger);
+        colors[CUI_TOKEN_INFO] = color(zenburn.info);
+        colors[CUI_TOKEN_CONTROL_ON] = color(accent);
+        colors[CUI_TOKEN_CONTROL_GLYPH] = color(zenburn.background);
+        colors[CUI_TOKEN_CONTROL_TRACK] = color(zenburn.surfaceMuted);
+        colors[CUI_TOKEN_CONTROL_TRACK_HOVER] = color(mix(zenburn.surfaceMuted,
+                zenburn.foreground, 0.12));
+        colors[CUI_TOKEN_CONTROL_THUMB] = color(zenburn.foreground);
+        colors[CUI_TOKEN_CONTROL_THUMB_ON] = color(zenburn.background);
+        colors[CUI_TOKEN_HOVER] = color(zenburn.foreground, 13);
+        colors[CUI_TOKEN_ACTIVE] = color(zenburn.foreground, 19);
+        colors[CUI_TOKEN_FOCUS_RING] = color(mix(accent, zenburn.background, 0.35));
+        foreach (index, series; zenburn.series)
+        {
+            colors[CUI_TOKEN_SERIES_1 + index] = color(series);
+        }
+        theme.tone_sky = color(zenburn.series[0]);
+        theme.tone_amber = color(zenburn.series[1]);
+        theme.tone_green = color(zenburn.series[2]);
+        theme.tone_orchid = color(zenburn.series[3]);
+        theme.tone_violet = color(zenburn.series[3]);
+        theme.tone_rose = color(zenburn.danger);
+        theme.tone_teal = color(zenburn.series[5]);
     }
 
     ~this()
@@ -238,10 +295,11 @@ final class SelectorWindow
         auto travel = bounds.h - thumbHeight - 4;
         auto ratio = max(0.0f, min(1.0f, scrollTop / (contentHeight - bounds.h)));
         auto x = bounds.x + bounds.w - width - 2;
+        auto foreground = cui_color_of(ui, tokenColor(CuiToken.foreground));
         cui_draw_rect(ui, cui_rect(x, bounds.y + 2, width, bounds.h - 4),
-                cui_corners(3, 3, 3, 3), cui_color(255, 255, 255, 18));
+                cui_corners(3, 3, 3, 3), cui_alpha(foreground, 0.08f));
         cui_draw_rect(ui, cui_rect(x, bounds.y + 2 + ratio * travel, width,
-                thumbHeight), cui_corners(3, 3, 3, 3), cui_color(255, 255, 255, 90));
+                thumbHeight), cui_corners(3, 3, 3, 3), cui_alpha(foreground, 0.35f));
     }
 
     /// Scrolls the highlighted row into view; true once it is fully visible.

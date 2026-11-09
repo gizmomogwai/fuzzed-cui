@@ -1,11 +1,14 @@
+import argparse.api.cli : CLI;
+import argparse.config : Config;
+import argparse : Description, NamedArgument;
 import core.sys.posix.unistd : isatty;
 import selector.model : Navigation, Selector;
+import selector.theme : parseTheme, resolveAccent;
 import selector.window : SelectorWindow;
 import std.array : array;
 import std.exception : enforce;
 import std.file : write;
 import std.format : format;
-import std.getopt : getopt;
 import std.stdio : stderr, stdin, stdout;
 
 private string[] sampleLines()
@@ -29,33 +32,44 @@ private void writePpm(string path, const(ubyte)[] rgba, int width, int height)
     write(path, data);
 }
 
-int main(string[] arguments)
+struct Options
 {
-    string initialQuery;
-    string screenshotPath;
+    @(NamedArgument.Description("Use built-in sample lines instead of stdin"))
     bool demo;
-    int highlightSteps;
+    @(NamedArgument.Description("Initial filter text"))
+    string query;
+    @(NamedArgument.Description("Move the highlight down this many rows first (for screenshots)"))
+    int down;
+    @(NamedArgument.Description("Render headlessly to this PPM file and exit"))
+    string screenshot;
+    @(NamedArgument.Description("Color theme: default or zenburn"))
+    string theme = "default";
+    @(NamedArgument.Description("Accent color. default: neutral, violet, blue, green, amber, orange, coral, rose; "
+            ~ "zenburn: yellow, cyan, green, orange, red, magenta, blue"))
+    string accent;
+}
+
+int run(Options options)
+{
     try
     {
-        arguments.getopt("down", "Move the highlight down this many rows first (for screenshots)",
-                &highlightSteps, "demo",
-                "Use built-in sample lines instead of stdin", &demo, "query",
-                "Initial filter text", &initialQuery, "screenshot",
-                "Render headlessly to this PPM file and exit", &screenshotPath);
-        auto lines = demo || isatty(0) ? sampleLines : stdin.byLineCopy.array;
+        auto theme = parseTheme(options.theme);
+        auto accent = resolveAccent(theme, options.accent);
+        auto lines = options.demo || isatty(0) ? sampleLines : stdin.byLineCopy.array;
         enforce(lines.length != 0, "No input lines");
         auto selector = new Selector(lines);
-        auto window = new SelectorWindow(selector, "cui-selector", screenshotPath.length != 0);
-        window.setQuery(initialQuery);
-        foreach (_; 0 .. highlightSteps)
+        auto window = new SelectorWindow(selector, "cui-selector",
+                options.screenshot.length != 0, theme, accent);
+        window.setQuery(options.query);
+        foreach (_; 0 .. options.down)
         {
             selector.navigate(Navigation.down);
         }
-        if (screenshotPath.length != 0)
+        if (options.screenshot.length != 0)
         {
             int width, height;
             auto pixels = window.screenshot(5, width, height);
-            writePpm(screenshotPath, pixels, width, height);
+            writePpm(options.screenshot, pixels, width, height);
             return 0;
         }
         window.run;
@@ -72,3 +86,5 @@ int main(string[] arguments)
         return 2;
     }
 }
+
+mixin CLI!(Options).main!(run);

@@ -41,30 +41,25 @@
           # The generated cui.pc joins absolute paths wrongly; dub links via CUI_PREFIX instead.
           postInstall = "rm -r $out/lib/pkgconfig";
         };
-        # The selector executable; compiled with ldc2 directly so no dub package fetching is needed.
-        cui-selector = pkgs.stdenv.mkDerivation {
+        # The selector executable, built by dub; dub-lock.json is generated with `nix run nixpkgs#dub-to-nix`.
+        cui-selector = pkgs.buildDubPackage {
           pname = "cui-selector";
-          version = "git";
+          version = self.shortRev or "dirty";
           src = self;
-          nativeBuildInputs = [ pkgs.ldc ];
+          dubLock = ./dub-lock.json;
+          dubBuildFlags = [ "--config=application" ];
           buildInputs = runtimePackages pkgs;
-          dontConfigure = true;
-          buildPhase = ''
-            runHook preBuild
-            ldc2 -O -of=cui-selector \
-              -P-I${cui}/include -L-L${cui}/lib -L-lcui \
-              -Isource -I${fuzzed}/source \
-              source/app.d source/cui_c.c source/cui_util.d \
-              source/selector/model.d source/selector/window.d \
-              ${fuzzed}/source/fuzzed/model.d ${fuzzed}/source/fuzzed/algorithm.d \
-              ${if pkgs.stdenv.hostPlatform.isDarwin
-                then "-L-framework -LCocoa -L-framework -LQuartzCore -L-framework -LOpenGL"
-                else "-L-lX11 -L-ldl -L-lm -L-lpthread"}
-            runHook postBuild
+          preBuild = "export CUI_PREFIX=${cui}";
+          # fuzzed is a local path dependency for development; point it at the flake input.
+          postPatch = ''
+            cp -r ${fuzzed} fuzzed-src
+            chmod -R u+w fuzzed-src
+            substituteInPlace dub.sdl dub.selections.json \
+              --replace-fail "../14-fuzzed" "$PWD/fuzzed-src"
           '';
           installPhase = ''
             runHook preInstall
-            install -D cui-selector $out/bin/cui-selector
+            install -Dm755 out/main/cui-selector/cui-selector -t $out/bin
             runHook postInstall
           '';
           meta.mainProgram = "cui-selector";
