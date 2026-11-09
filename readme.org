@@ -1,0 +1,15 @@
+* cui-selector
+Selector UI simulator: pipe lines in, filter and pick one, it is printed to stdout.
+Written in D, drawn with [[https://github.com/yappologistic/CUI][CUI]] (a C library) through ImportC (=source/cui_c.c=).
+
+** Develop
+#+begin_src sh
+  nix develop                                     # ldc, dub, cmake, libcui (CUI_PREFIX)
+  dub build --compiler=ldc2
+  dub test --compiler=ldc2
+  ls | out/main/cui-selector/cui-selector
+  out/main/cui-selector/cui-selector --demo       # built-in sample lines
+  out/main/cui-selector/cui-selector --demo --query sel --screenshot /tmp/shot.ppm
+#+end_src
+
+Keys: Up/Down/Ctrl-N/Ctrl-P, PageUp/PageDown, Enter accepts, Esc clears the query then quits.
