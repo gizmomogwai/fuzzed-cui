@@ -4,6 +4,7 @@ Written in D, drawn with [[https://github.com/yappologistic/CUI][CUI]] (a C libr
 
 ** Develop
 #+begin_src sh
+  nix run github:<owner>/cui                      # build and run straight from GitHub
   nix develop                                     # ldc, dub, cmake, libcui (CUI_PREFIX)
   dub build --compiler=ldc2
   dub test --compiler=ldc2

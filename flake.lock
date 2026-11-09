@@ -3,11 +3,11 @@
     "cui": {
       "flake": false,
       "locked": {
-        "lastModified": 1794263694,
-        "narHash": "sha256-bPiFvRjSOSTLECJY+ZUaqX2/b0mNkMONjJZ+MJx8mLg=",
+        "lastModified": 1794264608,
+        "narHash": "sha256-nHFIyubq/Zpkh4yqEYA1lAG+cTrcjvWxXqDwCBys6PA=",
         "owner": "gizmomogwai",
         "repo": "CUI",
-        "rev": "af2990c31e056a20134ca48242b593531ca514ca",
+        "rev": "fbd7fd7bae4022f2f99fbb459d1caac3fcd48dfd",
         "type": "github"
       },
       "original": {

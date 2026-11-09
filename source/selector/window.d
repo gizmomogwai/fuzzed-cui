@@ -6,6 +6,7 @@ import cui_util : CUI_FILL, CUI_PX, tokenColor, CuiToken;
 import selector.model : Navigation, Selector;
 import std.algorithm : max, min;
 import std.format : format;
+import std.range : empty;
 import std.string : toStringz;
 import std.uni : graphemeStride;
 
@@ -294,42 +295,34 @@ final class SelectorWindow
         return rowBounds;
     }
 
-    /// Draws `text` as runs, coloring the graphemes at `matchedPositions` with the accent.
+    /// Draws `text` as one text node, coloring the graphemes at `matchedPositions` with the accent.
     private void highlightedText(cui_ctx* ui, string text, const(ulong)[] matchedPositions)
     {
-        size_t runStart;
+        cui_highlight_range[] ranges;
         size_t offset;
         size_t position;
         size_t matchIndex;
-        bool runMatched;
-        while (offset < text.length)
+        while (offset < text.length && matchIndex < matchedPositions.length)
         {
-            auto matched = matchIndex < matchedPositions.length
-                && matchedPositions[matchIndex] == position;
-            if (matched)
+            const next = offset + graphemeStride(text, offset);
+            if (matchedPositions[matchIndex] == position)
             {
                 ++matchIndex;
+                if (!ranges.empty && ranges[$ - 1].end == offset)
+                {
+                    ranges[$ - 1].end = cast(int) next;
+                }
+                else
+                {
+                    ranges ~= cui_highlight_range(cast(int) offset, cast(int) next);
+                }
             }
-            if (offset != runStart && matched != runMatched)
-            {
-                textRun(ui, text[runStart .. offset], runMatched);
-                runStart = offset;
-            }
-            runMatched = matched;
-            offset += graphemeStride(text, offset);
+            offset = next;
             ++position;
         }
-        if (runStart < text.length)
-        {
-            textRun(ui, text[runStart .. $], runMatched);
-        }
-    }
-
-    private void textRun(cui_ctx* ui, string run, bool matched)
-    {
-        cui_text_opts options;
-        options.nowrap = true;
-        options.color = tokenColor(matched ? CuiToken.accent : CuiToken.foreground);
-        cui_text_ex(ui, run.toStringz, &options);
+        cui_highlight_text_opts options;
+        options.color = tokenColor(CuiToken.foreground);
+        options.highlight = tokenColor(CuiToken.accent);
+        cui_highlight_text_ex(ui, text.toStringz, ranges.ptr, cast(int) ranges.length, &options);
     }
 }
