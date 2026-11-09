@@ -1,5 +1,5 @@
 import core.sys.posix.unistd : isatty;
-import selector.model : Selector;
+import selector.model : Navigation, Selector;
 import selector.window : SelectorWindow;
 import std.array : array;
 import std.exception : enforce;
@@ -34,16 +34,23 @@ int main(string[] arguments)
     string initialQuery;
     string screenshotPath;
     bool demo;
+    int highlightSteps;
     try
     {
-        arguments.getopt("demo", "Use built-in sample lines instead of stdin",
-                &demo, "query", "Initial filter text", &initialQuery,
-                "screenshot", "Render headlessly to this PPM file and exit", &screenshotPath);
+        arguments.getopt("down", "Move the highlight down this many rows first (for screenshots)",
+                &highlightSteps, "demo",
+                "Use built-in sample lines instead of stdin", &demo, "query",
+                "Initial filter text", &initialQuery, "screenshot",
+                "Render headlessly to this PPM file and exit", &screenshotPath);
         auto lines = demo || isatty(0) ? sampleLines : stdin.byLineCopy.array;
         enforce(lines.length != 0, "No input lines");
         auto selector = new Selector(lines);
         auto window = new SelectorWindow(selector, "cui-selector", screenshotPath.length != 0);
         window.setQuery(initialQuery);
+        foreach (_; 0 .. highlightSteps)
+        {
+            selector.navigate(Navigation.down);
+        }
         if (screenshotPath.length != 0)
         {
             int width, height;

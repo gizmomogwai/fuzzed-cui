@@ -3,6 +3,7 @@ module selector.window;
 import core.stdc.string : strlen;
 import cui_c;
 import cui_util : CUI_FILL, CUI_PX, tokenColor, CuiToken;
+import selector.macos : hideTitleBar, titleBarInset;
 import selector.model : Navigation, Selector;
 import std.algorithm : max, min;
 import std.format : format;
@@ -10,7 +11,7 @@ import std.string : toStringz;
 import std.utf : stride;
 
 private enum rowHeight = 34.0f;
-private enum listChromeHeight = 110.0f;
+private enum listChromeHeight = 110.0f + titleBarInset;
 private enum queryCapacity = 256;
 
 /// Runs the selector in a CUI window until a line is chosen or the window is closed.
@@ -19,9 +20,8 @@ final class SelectorWindow
     private cui_app* app;
     private Selector selector;
     private char[queryCapacity] queryBuffer;
+    private float scrollTop = 0;
     private bool highlightChanged = true;
-    private int visibleFirst;
-    private int visibleLast;
 
     this(Selector selector, string title, bool hidden = false)
     {
@@ -38,6 +38,7 @@ final class SelectorWindow
         {
             throw new Exception("Could not create the CUI window");
         }
+        hideTitleBar(cui_app_native_window(app));
     }
 
     ~this()
@@ -142,6 +143,7 @@ final class SelectorWindow
 
         cui_box outer;
         outer.pad = 16;
+        outer.pad_top = 16 + titleBarInset;
         outer.gap = 10;
         outer.width = CUI_FILL;
         outer.height = CUI_FILL;
@@ -194,51 +196,91 @@ final class SelectorWindow
             cui_muted(ui, "No matches");
             return;
         }
-        if (highlightChanged)
-        {
-            scrollToHighlighted(ui, listHeight);
-            highlightChanged = false;
-        }
+        cui_box wrapper;
+        wrapper.id = "list";
+        wrapper.width = CUI_FILL;
+        wrapper.height = CUI_PX(listHeight);
+        wrapper.dir = CUI_STACK;
+        auto wrapperId = cui_box_begin(ui, &wrapper);
+        auto listBounds = cui_get_rect(ui, wrapperId);
         int first, last;
-        cui_virtual_list_begin(ui, "rows", selector.count, rowHeight,
-                CUI_PX(listHeight), &first, &last);
-        // CUI builds two extra rows on each side of what is visible.
-        visibleFirst = first == 0 ? 0 : first + 2;
-        visibleLast = max(visibleFirst, last - 2);
+        cui_virtual_list_begin(ui, "rows", selector.count, rowHeight, CUI_FILL, &first, &last);
+        bool scrollKnown;
         foreach (index; first .. last)
         {
-            resultRow(ui, index);
+            auto rowBounds = resultRow(ui, index);
+            if (!scrollKnown && listBounds.h > 0 && rowBounds.h > 0)
+            {
+                // Row `index` sits at index * rowHeight minus the scroll offset, as of the previous frame.
+                scrollTop = index * rowHeight - (rowBounds.y - listBounds.y);
+                scrollKnown = true;
+            }
         }
         cui_virtual_list_end(ui);
+        if (highlightChanged && listBounds.h > 0)
+        {
+            highlightChanged = !scrollToHighlighted(ui, listBounds.h);
+        }
+        scrollbar(ui, listBounds);
+        cui_box_end(ui);
     }
 
-    private void scrollToHighlighted(cui_ctx* ui, float listHeight)
+    /// A thin scrollbar that stays visible, unlike CUI's overlay bar that fades out.
+    private void scrollbar(cui_ctx* ui, cui_rect bounds)
     {
-        auto highlighted = selector.highlighted;
-        if (highlighted < visibleFirst)
+        auto contentHeight = selector.count * rowHeight;
+        if (bounds.h <= 0 || contentHeight <= bounds.h)
         {
-            cui_scroll_to(ui, "rows", highlighted * rowHeight);
+            return;
         }
-        else if (highlighted >= visibleLast - 1)
-        {
-            cui_scroll_to(ui, "rows", (highlighted + 1) * rowHeight - listHeight);
-        }
+        enum width = 6.0f;
+        auto thumbHeight = max(28.0f, bounds.h * bounds.h / contentHeight);
+        auto travel = bounds.h - thumbHeight - 4;
+        auto ratio = max(0.0f, min(1.0f, scrollTop / (contentHeight - bounds.h)));
+        auto x = bounds.x + bounds.w - width - 2;
+        cui_draw_rect(ui, cui_rect(x, bounds.y + 2, width, bounds.h - 4),
+                cui_corners(3, 3, 3, 3), cui_color(255, 255, 255, 18));
+        cui_draw_rect(ui, cui_rect(x, bounds.y + 2 + ratio * travel, width,
+                thumbHeight), cui_corners(3, 3, 3, 3), cui_color(255, 255, 255, 90));
     }
 
-    private void resultRow(cui_ctx* ui, int index)
+    /// Scrolls the highlighted row into view; true once it is fully visible.
+    private bool scrollToHighlighted(cui_ctx* ui, float listHeight)
+    {
+        auto rowTop = selector.highlighted * rowHeight;
+        auto rowBottom = rowTop + rowHeight;
+        if (rowTop < scrollTop)
+        {
+            cui_scroll_to(ui, "rows", rowTop);
+        }
+        else if (rowBottom > scrollTop + listHeight)
+        {
+            cui_scroll_to(ui, "rows", rowBottom - listHeight);
+        }
+        else
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private cui_rect resultRow(cui_ctx* ui, int index)
     {
         cui_box row;
+        row.id = format("row%d", index).toStringz;
         row.dir = CUI_ROW;
         row.height = CUI_PX(rowHeight - 4);
         row.width = CUI_FILL;
         row.pad_x = 10;
+        row.pad_right = 18;
         row.radius = 8;
         row.align_ = CUI_ALIGN_CENTER;
         if (index == selector.highlighted)
         {
             row.bg = tokenColor(CuiToken.accentSubtle);
         }
-        cui_box_begin(ui, &row);
+        auto rowId = cui_box_begin(ui, &row);
+        auto rowBounds = cui_get_rect(ui, rowId);
         highlightedText(ui, selector.row(index), selector.matchedOffsets(index));
         cui_box_end(ui);
         auto bounds = cui_last_rect(ui);
@@ -250,6 +292,7 @@ final class SelectorWindow
             selector.highlight(index);
             selector.accept;
         }
+        return rowBounds;
     }
 
     /// Draws `text` as runs, coloring the bytes at `matchedOffsets` with the accent.

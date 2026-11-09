@@ -15,7 +15,7 @@ configuration "application" {
     dflags "-P-I$CUI_PREFIX/include" platform="ldc"
     lflags "-L$CUI_PREFIX/lib" "-lcui"
     lflags "-lX11" "-ldl" "-lm" "-lpthread" platform="linux"
-    lflags "-framework" "Cocoa" "-framework" "QuartzCore" "-framework" "OpenGL" platform="osx"
+    lflags "-framework" "Cocoa" "-framework" "QuartzCore" "-framework" "OpenGL" "-lobjc" platform="osx"
 }
 
 configuration "unittest" {
