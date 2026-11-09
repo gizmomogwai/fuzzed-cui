@@ -5,6 +5,9 @@ copyright "Copyright (c) 2026, Christian Koestlin"
 license "MIT"
 toolchainRequirements ldc=">=1.42.0" dmd="no" gdc="no"
 
+dependency "fuzzed" path="../14-fuzzed"
+subConfiguration "fuzzed" "library"
+
 configuration "application" {
     targetType "executable"
     targetPath "out/main/cui-selector"

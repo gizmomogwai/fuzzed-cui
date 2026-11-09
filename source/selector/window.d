@@ -8,7 +8,7 @@ import selector.model : Navigation, Selector;
 import std.algorithm : max, min;
 import std.format : format;
 import std.string : toStringz;
-import std.utf : stride;
+import std.uni : graphemeStride;
 
 private enum rowHeight = 34.0f;
 private enum listChromeHeight = 110.0f + titleBarInset;
@@ -281,7 +281,7 @@ final class SelectorWindow
         }
         auto rowId = cui_box_begin(ui, &row);
         auto rowBounds = cui_get_rect(ui, rowId);
-        highlightedText(ui, selector.row(index), selector.matchedOffsets(index));
+        highlightedText(ui, selector.row(index), selector.matchedPositions(index));
         cui_box_end(ui);
         auto bounds = cui_last_rect(ui);
         auto mouse = cui_mouse_pos(ui);
@@ -295,16 +295,18 @@ final class SelectorWindow
         return rowBounds;
     }
 
-    /// Draws `text` as runs, coloring the bytes at `matchedOffsets` with the accent.
-    private void highlightedText(cui_ctx* ui, string text, const(size_t)[] matchedOffsets)
+    /// Draws `text` as runs, coloring the graphemes at `matchedPositions` with the accent.
+    private void highlightedText(cui_ctx* ui, string text, const(ulong)[] matchedPositions)
     {
         size_t runStart;
         size_t offset;
+        size_t position;
         size_t matchIndex;
         bool runMatched;
         while (offset < text.length)
         {
-            auto matched = matchIndex < matchedOffsets.length && matchedOffsets[matchIndex] == offset;
+            auto matched = matchIndex < matchedPositions.length
+                && matchedPositions[matchIndex] == position;
             if (matched)
             {
                 ++matchIndex;
@@ -315,7 +317,8 @@ final class SelectorWindow
                 runStart = offset;
             }
             runMatched = matched;
-            offset += stride(text, offset);
+            offset += graphemeStride(text, offset);
+            ++position;
         }
         if (runStart < text.length)
         {

@@ -3,22 +3,14 @@ module selector.model_test;
 import selector.model;
 import unit_threaded.assertions;
 
-@("subsequence matching ignores case and reports offsets")
+@("filtering keeps matches in input order and reports grapheme positions")
 unittest
 {
-    auto match = fuzzyMatch("Banana", "an", 0);
-    match.shouldNotBeNull;
-    match.matchedOffsets.shouldEqual([1, 2]);
-    fuzzyMatch("banana", "xz", 0).shouldBeNull;
-}
-
-@("ranks contiguous and boundary matches first")
-unittest
-{
-    auto selector = new Selector(["a---b", "ab", "xaxb"]);
+    auto selector = new Selector(["xaxb", "zzz", "Ab"]);
     selector.filter("ab");
-    selector.row(0).shouldEqual("ab");
-    selector.count.shouldEqual(3);
+    selector.count.shouldEqual(2);
+    selector.row(1).shouldEqual("Ab");
+    selector.matchedPositions(1).shouldEqual([0, 1]);
 }
 
 @("empty query keeps input order")
@@ -64,14 +56,4 @@ unittest
     selector.filter("zzz");
     selector.accept;
     selector.closed.shouldBeFalse;
-}
-
-@("contiguous substring outranks scattered subsequence")
-unittest
-{
-    auto selector = new Selector([
-        "source/selector", "dub.selections.json", "s-e-l"
-    ]);
-    selector.filter("sel");
-    selector.row(2).shouldEqual("s-e-l");
 }
