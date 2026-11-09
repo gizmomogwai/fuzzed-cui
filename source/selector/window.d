@@ -3,7 +3,6 @@ module selector.window;
 import core.stdc.string : strlen;
 import cui_c;
 import cui_util : CUI_FILL, CUI_PX, tokenColor, CuiToken;
-import selector.macos : hideTitleBar, titleBarInset;
 import selector.model : Navigation, Selector;
 import std.algorithm : max, min;
 import std.format : format;
@@ -11,7 +10,7 @@ import std.string : toStringz;
 import std.uni : graphemeStride;
 
 private enum rowHeight = 34.0f;
-private enum listChromeHeight = 110.0f + titleBarInset;
+private enum listChromeHeight = 110.0f;
 private enum queryCapacity = 256;
 
 /// Runs the selector in a CUI window until a line is chosen or the window is closed.
@@ -31,6 +30,7 @@ final class SelectorWindow
         description.width = 760;
         description.height = 560;
         description.hidden = hidden;
+        description.borderless = true;
         description.theme = CUI_THEME_DARK;
         description.accent = CUI_ACCENT_VIOLET;
         app = cui_app_create(&description);
@@ -38,7 +38,6 @@ final class SelectorWindow
         {
             throw new Exception("Could not create the CUI window");
         }
-        hideTitleBar(cui_app_native_window(app));
     }
 
     ~this()
@@ -143,7 +142,7 @@ final class SelectorWindow
 
         cui_box outer;
         outer.pad = 16;
-        outer.pad_top = 16 + titleBarInset;
+        outer.pad_top = 16;
         outer.gap = 10;
         outer.width = CUI_FILL;
         outer.height = CUI_FILL;

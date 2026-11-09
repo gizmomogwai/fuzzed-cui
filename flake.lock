@@ -3,15 +3,16 @@
     "cui": {
       "flake": false,
       "locked": {
-        "lastModified": 1794258302,
-        "narHash": "sha256-BjA75FUL0z9ax9RrwRiofVkPpmGYhDipXyLnapVYVus=",
-        "owner": "yappologistic",
+        "lastModified": 1794263694,
+        "narHash": "sha256-bPiFvRjSOSTLECJY+ZUaqX2/b0mNkMONjJZ+MJx8mLg=",
+        "owner": "gizmomogwai",
         "repo": "CUI",
-        "rev": "f70a1d3d095cafd67814b23bdd82c2dfba28efe0",
+        "rev": "af2990c31e056a20134ca48242b593531ca514ca",
         "type": "github"
       },
       "original": {
-        "owner": "yappologistic",
+        "owner": "gizmomogwai",
+        "ref": "borderless-window",
         "repo": "CUI",
         "type": "github"
       }

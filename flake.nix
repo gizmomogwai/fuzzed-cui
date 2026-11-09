@@ -4,7 +4,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     # CUI is a CMake project without a flake.
     cui = {
-      url = "github:yappologistic/CUI";
+      url = "github:gizmomogwai/CUI/borderless-window";
       flake = false;
     };
   };
