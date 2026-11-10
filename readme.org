@@ -4,8 +4,9 @@ Written in D, drawn with [[https://github.com/yappologistic/CUI][CUI]] (a C libr
 
 ** Develop
 #+begin_src sh
-  nix run github:gizmomogwai/cui-selector                     # build and run straight from GitHub
-  nix develop                                     # ldc, dub, cmake, libcui (CUI_PREFIX)
+  nix run 'git+https://github.com/gizmomogwai/cui-selector'   # build and run straight from GitHub
+  git submodule update --init                     # CUI source in vendor/cui
+  nix develop                                     # ldc, dub, cmake; dub builds CUI from vendor/cui
   dub build --compiler=ldc2
   dub test --compiler=ldc2
   ls | out/main/cui-selector/cui-selector

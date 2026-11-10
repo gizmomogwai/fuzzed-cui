@@ -1,22 +1,5 @@
 {
   "nodes": {
-    "cui": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1794264608,
-        "narHash": "sha256-nHFIyubq/Zpkh4yqEYA1lAG+cTrcjvWxXqDwCBys6PA=",
-        "owner": "gizmomogwai",
-        "repo": "CUI",
-        "rev": "fbd7fd7bae4022f2f99fbb459d1caac3fcd48dfd",
-        "type": "github"
-      },
-      "original": {
-        "owner": "gizmomogwai",
-        "ref": "borderless-window",
-        "repo": "CUI",
-        "type": "github"
-      }
-    },
     "fuzzed": {
       "flake": false,
       "locked": {
@@ -51,7 +34,6 @@
     },
     "root": {
       "inputs": {
-        "cui": "cui",
         "fuzzed": "fuzzed",
         "nixpkgs": "nixpkgs"
       }

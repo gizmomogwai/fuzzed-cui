@@ -2,7 +2,7 @@ module selector.window;
 
 import core.stdc.string : strlen;
 import cui_c;
-import cui_util : CUI_FILL, CUI_PX, tokenColor, CuiToken;
+import cui_util : CUI_FILL, tokenColor, CuiToken;
 import selector.model : Navigation, Selector;
 import selector.theme : mix, Rgb, standardAccentIndex, ThemeName, zenburn, zenburnAccent;
 import std.algorithm : max, min;
@@ -12,7 +12,6 @@ import std.string : toStringz;
 import std.uni : graphemeStride;
 
 private enum rowHeight = 34.0f;
-private enum listChromeHeight = 110.0f;
 private enum queryCapacity = 256;
 
 /// Runs the selector in a CUI window until a line is chosen or the window is closed.
@@ -194,9 +193,6 @@ final class SelectorWindow
     private void frame(cui_ctx* ui)
     {
         handleKeys(ui);
-        auto viewport = cui_viewport_size(ui);
-        auto listHeight = max(rowHeight, viewport.y - listChromeHeight);
-        selector.pageSize = cast(int)(listHeight / rowHeight) - 1;
 
         cui_box outer;
         outer.pad = 16;
@@ -212,7 +208,7 @@ final class SelectorWindow
 
         searchField(ui);
         statusLine(ui);
-        resultList(ui, listHeight);
+        resultList(ui);
     }
 
     private void searchField(cui_ctx* ui)
@@ -246,7 +242,7 @@ final class SelectorWindow
         cui_kbd(ui, "Esc");
     }
 
-    private void resultList(cui_ctx* ui, float listHeight)
+    private void resultList(cui_ctx* ui)
     {
         if (selector.count == 0)
         {
@@ -256,10 +252,15 @@ final class SelectorWindow
         cui_box wrapper;
         wrapper.id = "list";
         wrapper.width = CUI_FILL;
-        wrapper.height = CUI_PX(listHeight);
+        wrapper.height = CUI_FILL;
         wrapper.dir = CUI_STACK;
         auto wrapperId = cui_box_begin(ui, &wrapper);
         auto listBounds = cui_get_rect(ui, wrapperId);
+        if (listBounds.h > 0)
+        {
+            // Bounds are from the previous frame; the model keeps its default until then.
+            selector.pageSize = cast(int)(listBounds.h / rowHeight) - 1;
+        }
         int first, last;
         cui_virtual_list_begin(ui, "rows", selector.count, rowHeight, CUI_FILL, &first, &last);
         bool scrollKnown;
@@ -327,7 +328,6 @@ final class SelectorWindow
         cui_box row;
         row.id = format("row%d", index).toStringz;
         row.dir = CUI_ROW;
-        row.height = CUI_PX(rowHeight - 4);
         row.width = CUI_FILL;
         row.pad_x = 10;
         row.pad_right = 18;

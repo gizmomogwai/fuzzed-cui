@@ -1,0 +1,4 @@
+[submodule "vendor/cui"]
+	path = vendor/cui
+	url = https://github.com/gizmomogwai/CUI.git
+	branch = fork

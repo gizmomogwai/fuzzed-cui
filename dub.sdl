@@ -16,8 +16,14 @@ configuration "application" {
     sourcePaths "source"
     importPaths "source"
     mainSourceFile "source/app.d"
-    dflags "-P-I$CUI_PREFIX/include" platform="ldc"
-    lflags "-L$CUI_PREFIX/lib" "-lcui"
+    // CUI is built from the vendor/cui submodule, so local edits there are always used.
+    preBuildCommands "cmake -S $PACKAGE_DIR/vendor/cui -B $PACKAGE_DIR/out/cui -DCUI_BUILD_EXAMPLES=OFF -DCUI_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release" \
+        "cmake --build $PACKAGE_DIR/out/cui"
+    // Without these, dub sees an edit only in vendor/cui as up to date and skips the build.
+    extraDependencyFiles "vendor/cui/CMakeLists.txt" "vendor/cui/include/cui/*.h" "vendor/cui/src/*.c" \
+        "vendor/cui/src/*.h" "vendor/cui/src/platform/*"
+    dflags "-P-I$PACKAGE_DIR/vendor/cui/include" platform="ldc"
+    lflags "-L$PACKAGE_DIR/out/cui" "-lcui"
     lflags "-lX11" "-ldl" "-lm" "-lpthread" platform="linux"
     lflags "-framework" "Cocoa" "-framework" "QuartzCore" "-framework" "OpenGL" platform="osx"
 }
